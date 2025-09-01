@@ -1,0 +1,81 @@
+import matplotlib.pyplot as plt
+
+class Node:
+    __slots__ = ("n", "children", "value", "label", "occurrence")
+    def __init__(self, n):
+        self.n = n
+        self.children = []
+        self.value = None
+        self.label = None
+        self.occurrence = None
+
+def build_tree(n, counter):
+    node = Node(n)
+    if n < 2:
+        node.value = 1
+        if n == 1:
+            counter["f1"] += 1
+            node.occurrence = counter["f1"]
+        node.label = f"f({n}) = {node.value}" + (f"  (f(1) #{node.occurrence})" if node.occurrence else "")
+        return node, node.value
+    left, s = build_tree(n-1, counter)
+    right, t = build_tree(n-2, counter)
+    node.children = [left, right]
+    node.value = s + t
+    node.label = f"f({n}) = {node.value}"
+    return node, node.value
+
+def layout_positions(root):
+    positions, depth = {}, {}
+    x_counter = [0]
+    def traverse(node, d):
+        depth[node] = d
+        if node.children:
+            traverse(node.children[0], d+1)
+        positions[node] = (x_counter[0], -d)
+        x_counter[0] += 1
+        if node.children and len(node.children) > 1:
+            traverse(node.children[1], d+1)
+    traverse(root, 0)
+    return positions, depth
+
+def draw_tree(root, title="Árbol de activación de Fibonacci f(5)"):
+    pos, depth = layout_positions(root)
+    fig, ax = plt.subplots(figsize=(12, 7))
+    ax.set_title(title)
+    ax.axis("off")
+
+    def draw_edges(node):
+        x0, y0 = pos[node]
+        for child in node.children:
+            x1, y1 = pos[child]
+            ax.plot([x0, x1], [y0, y1])
+            draw_edges(child)
+    draw_edges(root)
+
+    for node, (x, y) in pos.items():
+        circ = plt.Circle((x, y), 0.22, fill=False)
+        ax.add_patch(circ)
+        ax.text(x, y, node.label, ha="center", va="center", fontsize=8)
+
+    # Nota para la 5a f(1)
+    fifth = None
+    def find_fifth(node):
+        nonlocal fifth
+        if node.occurrence == 5:
+            fifth = node
+        for ch in node.children:
+            find_fifth(ch)
+    find_fifth(root)
+    if fifth:
+        x, y = pos[fifth]
+        ax.text(x, y-0.6, "5ª llamada a f(1)", ha="center", va="center", fontsize=9)
+    return fig
+
+if __name__ == "__main__":
+    counter = {"f1": 0}
+    root, _ = build_tree(5, counter)
+    fig = draw_tree(root)
+    fig.tight_layout()
+    fig.savefig("Arbol_Activacion_Fibonacci_f5.png", dpi=200, bbox_inches="tight")
+ 
